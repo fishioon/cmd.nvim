@@ -10,13 +10,6 @@ local function get_code_blocks()
   return lines
 end
 
-local function envsubst(str)
-  return str:gsub("%$(%b{})", function(var)
-    local envVar = var:sub(2, -2)
-    return vim.env[envVar] or ""
-  end)
-end
-
 local function startsWith(str, substr)
   return string.sub(str, 1, string.len(substr)) == substr
 end
@@ -31,6 +24,32 @@ local function startsWithHttpMethod(str)
   return false
 end
 
+local function handleExport(line)
+  if startsWith(line, 'export') then
+    local equalsPos = string.find(line, '=')
+    if equalsPos then
+      local key = string.sub(line, 8, equalsPos - 1)
+      local val = string.sub(line, equalsPos + 1)
+      if key then
+        vim.env[key] = val
+      end
+    end
+  end
+end
+
+local function handleExportLines(lines)
+  for i = 1, #lines do
+    handleExport(lines[i])
+  end
+end
+
+local function envsubst(str)
+  return str:gsub("%$(%b{})", function(var)
+    local envVar = var:sub(2, -2)
+    return vim.env[envVar] or ""
+  end)
+end
+
 local function har2curl(lines, index)
   local method = ''
   local path = ''
@@ -40,21 +59,11 @@ local function har2curl(lines, index)
   local header_end = false
   for i = index, #lines do
     local line = envsubst(lines[i])
+    handleExport(line)
     if method == '' then
       if startsWithHttpMethod(line) then
         method, path = line:match("(%S+)%s+(%S+)")
         url = path:sub(1, 1) == '/' and '' or path
-      else
-        if startsWith(line, 'export') then
-          local equalsPos = string.find(line, '=')
-          if equalsPos then
-            local key = string.sub(line, 8, equalsPos - 1)
-            local val = string.sub(line, equalsPos + 1)
-            if key then
-              vim.env[key] = val
-            end
-          end
-        end
       end
     else
       if not header_end then
@@ -65,11 +74,11 @@ local function har2curl(lines, index)
           if url == '' then
             if startsWith(line, 'host') or startsWith(line, 'Host') then
               local hostname, port = line:lower():match("host:%s*(.-):?(%d*)$")
-              if port == '443' then
-                url = 'https://' .. hostname .. path
-              else
-                url = 'http://' .. hostname .. ':' .. port .. path
+              if port == '' then
+                port = '80'
               end
+              local protocol = port == '443' and 'https://' or 'http://'
+              url = protocol .. hostname .. ':' .. port .. path
             end
           end
         end
@@ -116,6 +125,7 @@ local function cmd()
       if lines[1] == 'http' then
         return har2curl(lines, 2)
       end
+      handleExportLines(lines)
       return table.concat(lines, '\n', 2)
     end
   elseif vim.bo.filetype == 'go' then
