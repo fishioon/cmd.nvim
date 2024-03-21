@@ -82,6 +82,9 @@ local function har2curl(lines, index)
       end
     end
   end
+  if method == '' or url == '' then
+    error("invalid http request")
+  end
 
   local curl_command = "curl -s -S -X " .. method .. headers .. " '" .. url .. "'"
   if body ~= "" then
