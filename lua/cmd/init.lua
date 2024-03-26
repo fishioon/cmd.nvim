@@ -35,6 +35,7 @@ local function handleExport(line)
       end
     end
   end
+  return line
 end
 
 local function handleExportLines(lines)
@@ -58,8 +59,7 @@ local function har2curl(lines, index)
   local url = ''
   local header_end = false
   for i = index, #lines do
-    local line = envsubst(lines[i])
-    handleExport(line)
+    local line = lines[i]
     if method == '' then
       if startsWithHttpMethod(line) then
         method, path = line:match("(%S+)%s+(%S+)")
@@ -117,15 +117,22 @@ local function getGOPkg()
   return ""
 end
 
+local function handleEnv(lines)
+  for i = 1, #lines do
+    lines[i] = handleExport(envsubst(lines[i]))
+  end
+  return lines
+end
+
 local function cmd()
   local line = vim.fn.getline('.')
   if vim.bo.filetype == 'markdown' then
     local lines = get_code_blocks()
     if lines ~= nil then
+      lines = handleEnv(lines)
       if lines[1] == 'http' then
         return har2curl(lines, 2)
       end
-      handleExportLines(lines)
       return table.concat(lines, '\n', 2)
     end
   elseif vim.bo.filetype == 'go' then
