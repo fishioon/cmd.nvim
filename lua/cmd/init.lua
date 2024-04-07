@@ -38,12 +38,6 @@ local function handleExport(line)
   return line
 end
 
-local function handleExportLines(lines)
-  for i = 1, #lines do
-    handleExport(lines[i])
-  end
-end
-
 local function envsubst(str)
   return str:gsub("%$(%b{})", function(var)
     local envVar = var:sub(2, -2)
@@ -141,7 +135,7 @@ local function cmd()
       return 'go test -timeout 30s -run ^Test' .. funcName .. '$ ' .. getGOPkg()
     end
   end
-  return line
+  return handleExport(envsubst(line))
 end
 
 local function setup()
