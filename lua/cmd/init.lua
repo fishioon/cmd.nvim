@@ -6,8 +6,9 @@ local function get_code_blocks()
     return nil
   end
   local lines = vim.api.nvim_buf_get_lines(0, start_no - 1, end_no - 1, true)
-  lines[1] = lines[1]:sub(4, -1)
-  return lines
+  local kind = lines[1]:sub(4, -1)
+  table.remove(lines, 1)
+  return kind, lines
 end
 
 local function startsWith(str, substr)
@@ -45,14 +46,14 @@ local function envsubst(str)
   end)
 end
 
-local function har2curl(lines, index)
+local function har2curl(lines)
   local method = ''
   local path = ''
   local headers = ''
   local body = ''
   local url = ''
   local header_end = false
-  for i = index, #lines do
+  for i = 1, #lines do
     local line = lines[i]
     if method == '' then
       if startsWithHttpMethod(line) then
@@ -121,11 +122,11 @@ end
 local function cmd()
   local line = vim.fn.getline('.')
   if vim.bo.filetype == 'markdown' then
-    local lines = get_code_blocks()
-    if lines ~= nil then
+    local kind, lines = get_code_blocks()
+    if not kind and lines ~= nil then
       lines = handleEnv(lines)
-      if lines[1] == 'http' then
-        return har2curl(lines, 2)
+      if kind == 'http' then
+        return har2curl(lines)
       end
       return table.concat(lines, '\n', 2)
     end
