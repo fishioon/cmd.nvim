@@ -123,12 +123,12 @@ local function cmd()
   local line = vim.fn.getline('.')
   if vim.bo.filetype == 'markdown' then
     local kind, lines = get_code_blocks()
-    if not kind and lines ~= nil then
+    if kind and lines then
       lines = handleEnv(lines)
       if kind == 'http' then
         return har2curl(lines)
       end
-      return table.concat(lines, '\n', 2)
+      return table.concat(lines, '\n', 1)
     end
   elseif vim.bo.filetype == 'go' then
     local funcName = string.match(line, "^func%s+Test([%w_]+)%(%w+%s*%*?%w+%.?%w*%)%s*%{")
