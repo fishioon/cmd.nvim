@@ -119,9 +119,31 @@ local function handleEnv(lines)
   return lines
 end
 
+local function loadEnv()
+  local start_no = vim.fn.search('```env', 'n')
+  local end_no = vim.fn.search('```', 'n')
+  if start_no == 0 or end_no == 0 or start_no == end_no then
+    return
+  end
+  local lines = vim.api.nvim_buf_get_lines(0, start_no, end_no - 1, true)
+  for i = 1, #lines do
+    local line = lines[i]
+    local equalsPos = string.find(line, '=')
+    if equalsPos then
+      local key = string.sub(line, 1, equalsPos - 1)
+      local val = string.sub(line, equalsPos + 1)
+      if key then
+        vim.env[key] = val
+      end
+    end
+  end
+end
+
 local function cmd()
   local line = vim.fn.getline('.')
   if vim.bo.filetype == 'markdown' then
+    -- load vim env
+    loadEnv()
     local kind, lines = get_code_blocks()
     if kind and lines then
       lines = handleEnv(lines)
