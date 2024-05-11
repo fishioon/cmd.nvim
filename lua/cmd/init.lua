@@ -1,4 +1,6 @@
--- first line is type
+local curl_command = 'curl -s -S {input}'
+local env = {}
+
 local function get_code_blocks()
   local start_no = vim.fn.search('```', 'cnWb')
   local end_no = vim.fn.search('```', 'cnW')
@@ -32,7 +34,7 @@ local function handleExport(line)
       local key = string.sub(line, 8, equalsPos - 1)
       local val = string.sub(line, equalsPos + 1)
       if key then
-        vim.env[key] = val
+        env[key] = val
       end
     end
   end
@@ -42,7 +44,7 @@ end
 local function envsubst(str)
   return str:gsub("%$(%b{})", function(var)
     local envVar = var:sub(2, -2)
-    return vim.env[envVar] or ""
+    return env[envVar] or ""
   end)
 end
 
@@ -90,11 +92,13 @@ local function har2curl(lines)
     error("invalid http request")
   end
 
-  local curl_command = "curl -s -S -X " .. method .. headers .. " '" .. url .. "'"
+  local curl_input = '-X ' .. method .. headers .. " '" .. url .. "'"
   if body ~= "" then
-    curl_command = curl_command .. " -d '" .. body .. "'"
+    curl_input = curl_input .. " -d '" .. body .. "'"
   end
-  return curl_command
+
+  local curl = env.curl and env.curl or curl_command
+  return string.gsub(curl, "{input}", curl_input)
 end
 
 local function getGOPkg()
@@ -133,7 +137,7 @@ local function loadEnv()
       local key = string.sub(line, 1, equalsPos - 1)
       local val = string.sub(line, equalsPos + 1)
       if key then
-        vim.env[key] = val
+        env[key] = val
       end
     end
   end
@@ -142,15 +146,15 @@ end
 local function cmd()
   local line = vim.fn.getline('.')
   if vim.bo.filetype == 'markdown' then
-    -- load vim env
     loadEnv()
     local kind, lines = get_code_blocks()
     if kind and lines then
       lines = handleEnv(lines)
       if kind == 'http' then
         return har2curl(lines)
+      elseif kind == 'sh' then
+        return table.concat(lines, '\n', 1)
       end
-      return table.concat(lines, '\n', 1)
     end
   elseif vim.bo.filetype == 'go' then
     local funcName = string.match(line, "^func%s+Test([%w_]+)%(%w+%s*%*?%w+%.?%w*%)%s*%{")
