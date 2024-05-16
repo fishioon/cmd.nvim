@@ -1,5 +1,9 @@
 local curl_command = 'curl -s -S {input}'
-local env = {}
+local local_env = {}
+
+local function get_env(name, default_var)
+  return local_env[name] or vim.env[name] or default_var
+end
 
 local function get_code_blocks()
   local start_no = vim.fn.search('```', 'cnWb')
@@ -34,7 +38,7 @@ local function handleExport(line)
       local key = string.sub(line, 8, equalsPos - 1)
       local val = string.sub(line, equalsPos + 1)
       if key then
-        env[key] = val
+        vim.env[key] = val
       end
     end
   end
@@ -42,10 +46,10 @@ local function handleExport(line)
 end
 
 local function envsubst(str)
-  return str:gsub("%$(%b{})", function(var)
-    local envVar = var:sub(2, -2)
-    return env[envVar] or ""
+  local s = str:gsub("%($%b{})", function(var)
+    return get_env(var:sub(3, -2), var)
   end)
+  return s
 end
 
 local function har2curl(lines)
@@ -97,8 +101,7 @@ local function har2curl(lines)
     curl_input = curl_input .. " -d '" .. body .. "'"
   end
 
-  local curl = env.curl and env.curl or curl_command
-  return string.gsub(curl, "{input}", curl_input)
+  return string.gsub(get_env('curl', curl_command), "{input}", curl_input)
 end
 
 local function getGOPkg()
@@ -123,11 +126,13 @@ local function handleEnv(lines)
   return lines
 end
 
-local function loadEnv()
-  local start_no = vim.fn.search('```env', 'n')
-  local end_no = vim.fn.search('```', 'n')
+local function loadEnv(cursor)
+  local env = {}
+  local start_no = vim.fn.search('```env', 'bcW')
+  local end_no = vim.fn.search('```', 'W')
+  vim.fn.cursor(cursor)
   if start_no == 0 or end_no == 0 or start_no == end_no then
-    return
+    return env
   end
   local lines = vim.api.nvim_buf_get_lines(0, start_no, end_no - 1, true)
   for i = 1, #lines do
@@ -141,14 +146,16 @@ local function loadEnv()
       end
     end
   end
+  return env
 end
 
 local function cmd()
+  local cursor = vim.api.nvim_win_get_cursor(0)
   local line = vim.fn.getline('.')
   if vim.bo.filetype == 'markdown' then
-    loadEnv()
+    local_env = loadEnv(cursor)
     local kind, lines = get_code_blocks()
-    if kind and lines then
+    if kind and #kind > 0 and lines then
       lines = handleEnv(lines)
       if kind == 'http' then
         return har2curl(lines)
