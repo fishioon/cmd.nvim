@@ -46,8 +46,8 @@ local function handleExport(line)
 end
 
 local function envsubst(str)
-  local s = str:gsub("%($%b{})", function(var)
-    return get_env(var:sub(3, -2), var)
+  local s = str:gsub("%$(%b{})", function(var)
+    return get_env(var:sub(2, -2), '')
   end)
   return s
 end
