@@ -38,7 +38,7 @@ local function handleExport(line)
       local key = string.sub(line, 8, equalsPos - 1)
       local val = string.sub(line, equalsPos + 1)
       if key then
-        vim.env[key] = val
+        local_env[key] = val
       end
     end
   end
