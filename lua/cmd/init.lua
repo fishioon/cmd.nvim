@@ -55,6 +55,8 @@ end
 local function har2curl(lines)
   local method = ''
   local path = ''
+  local hostname = ''
+  local port = 80
   local headers = ''
   local body = ''
   local url = ''
@@ -71,16 +73,10 @@ local function har2curl(lines)
         if line == '' then
           header_end = true
         else
-          headers = headers .. ' -H "' .. line .. '"'
-          if url == '' then
-            if startsWith(line, 'host') or startsWith(line, 'Host') then
-              local hostname, port = line:lower():match("host:%s*(.-):?(%d*)$")
-              if port == '' then
-                port = '80'
-              end
-              local protocol = port == '443' and 'https://' or 'http://'
-              url = protocol .. hostname .. ':' .. port .. path
-            end
+          if startsWith(line, 'host:') or startsWith(line, 'Host:') then
+            hostname, port = line:lower():match("host:%s*(.-):?(%d*)$")
+          else
+            headers = headers .. ' -H "' .. line .. '"'
           end
         end
       else
@@ -91,6 +87,14 @@ local function har2curl(lines)
         end
       end
     end
+  end
+  if url == '' and hostname ~= '' and path ~= '' then
+    local protocol = port == '443' and 'https://' or 'http://'
+    url = protocol .. hostname
+    if port ~= '443' and port ~= '80' then
+      url = url .. ':' .. port
+    end
+    url = url .. path
   end
   if method == '' or url == '' then
     error("invalid http request")
