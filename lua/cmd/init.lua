@@ -47,7 +47,7 @@ end
 
 local function envsubst(str)
   local s = str:gsub("%$(%b{})", function(var)
-    return get_env(var:sub(2, -2), '')
+    return get_env(var:sub(2, -2), '${' .. var .. '}')
   end)
   return s
 end
@@ -170,7 +170,7 @@ local function cmd()
   elseif vim.bo.filetype == 'go' then
     local funcName = string.match(line, "^func%s+Test([%w_]+)%(%w+%s*%*?%w+%.?%w*%)%s*%{")
     if funcName then
-      return 'go test -timeout 30s -run ^Test' .. funcName .. '$ ' .. getGOPkg()
+      return "go test -timeout 30s -run '^Test" .. funcName .. "$' " .. getGOPkg()
     end
   end
   return handleExport(envsubst(line))
