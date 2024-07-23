@@ -52,12 +52,19 @@ local function envsubst(str)
   return s
 end
 
+local function parse_host(host)
+  local hostname, port = host:gsub("^%s*(.-)%s*$", "%1"):match("([^:]+):?(%d*)")
+  if port == "" then
+    port = "80"
+  end
+  return hostname, port
+end
+
 local function har2curl(lines)
   local method = ''
   local path = ''
-  local hostname = ''
-  local port = 80
   local headers = ''
+  local host = get_env('host', '')
   local body = ''
   local url = ''
   local header_end = false
@@ -70,11 +77,12 @@ local function har2curl(lines)
       end
     else
       if not header_end then
-        if line == '' then
+        if line == '' or line == '{' then
           header_end = true
+          body = line
         else
           if startsWith(line, 'host:') or startsWith(line, 'Host:') then
-            hostname, port = line:lower():match("host:%s*(.-):?(%d*)$")
+            host = line:sub(6)
           else
             headers = headers .. ' -H "' .. line .. '"'
           end
@@ -88,7 +96,8 @@ local function har2curl(lines)
       end
     end
   end
-  if url == '' and hostname ~= '' and path ~= '' then
+  if url == '' and host ~= '' and path ~= '' then
+    local hostname, port = parse_host(host)
     local protocol = port == '443' and 'https://' or 'http://'
     url = protocol .. hostname
     if port ~= '443' and port ~= '80' then
