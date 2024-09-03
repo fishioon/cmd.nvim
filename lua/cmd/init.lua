@@ -144,7 +144,6 @@ local function read_file_lines(file_path)
   local file = io.open(file_path, "r")
 
   if not file then
-    print("Could not open file: " .. file_path)
     return nil
   end
 
@@ -173,11 +172,12 @@ end
 
 local function loadWorkspaceEnv()
   local lines = read_file_lines('.env')
-  return loadEnvLines(lines, vim.env)
+  if lines then
+    loadEnvLines(lines, vim.env)
+  end
 end
 
 local function loadEnv(cursor)
-  loadWorkspaceEnv()
   local env = {}
   local start_no = vim.fn.search('```env', 'bcW')
   local end_no = vim.fn.search('```', 'W')
@@ -190,6 +190,7 @@ local function loadEnv(cursor)
 end
 
 local function cmd()
+  loadWorkspaceEnv()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line = vim.fn.getline('.')
   if vim.bo.filetype == 'markdown' then
