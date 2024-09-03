@@ -2,7 +2,7 @@ local curl_command = 'curl -s -S {input}'
 local local_env = {}
 
 local function get_env(name, default_var)
-  return local_env[name] or vim.env[name] or default_var
+  return local_env[name] or vim.env[name] or os.getenv(name) or default_var
 end
 
 local function get_code_blocks()
@@ -139,15 +139,24 @@ local function handleEnv(lines)
   return lines
 end
 
-local function loadEnv(cursor)
-  local env = {}
-  local start_no = vim.fn.search('```env', 'bcW')
-  local end_no = vim.fn.search('```', 'W')
-  vim.fn.cursor(cursor)
-  if start_no == 0 or end_no == 0 or start_no == end_no then
-    return env
+local function read_file_lines(file_path)
+  local lines = {}
+  local file = io.open(file_path, "r")
+
+  if not file then
+    print("Could not open file: " .. file_path)
+    return nil
   end
-  local lines = vim.api.nvim_buf_get_lines(0, start_no, end_no - 1, true)
+
+  for line in file:lines() do
+    table.insert(lines, line)
+  end
+
+  file:close()
+  return lines
+end
+
+local function loadEnvLines(lines, env)
   for i = 1, #lines do
     local line = lines[i]
     local equalsPos = string.find(line, '=')
@@ -160,6 +169,24 @@ local function loadEnv(cursor)
     end
   end
   return env
+end
+
+local function loadWorkspaceEnv()
+  local lines = read_file_lines('.env')
+  return loadEnvLines(lines, vim.env)
+end
+
+local function loadEnv(cursor)
+  loadWorkspaceEnv()
+  local env = {}
+  local start_no = vim.fn.search('```env', 'bcW')
+  local end_no = vim.fn.search('```', 'W')
+  vim.fn.cursor(cursor)
+  if start_no == 0 or end_no == 0 or start_no == end_no then
+    return env
+  end
+  local lines = vim.api.nvim_buf_get_lines(0, start_no, end_no - 1, true)
+  return loadEnvLines(lines, env)
 end
 
 local function cmd()
