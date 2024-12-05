@@ -32,7 +32,7 @@ local function startsWithHttpMethod(str)
 end
 
 local function handleExport(line)
-  if startsWith(line, 'export') then
+  if startsWith(line, 'export ') then
     local equalsPos = string.find(line, '=')
     if equalsPos then
       local key = string.sub(line, 8, equalsPos - 1)
@@ -160,7 +160,11 @@ local function loadEnvLines(lines, env)
     local line = lines[i]
     local equalsPos = string.find(line, '=')
     if equalsPos then
-      local key = string.sub(line, 1, equalsPos - 1)
+      local startPos = 1
+      if startsWith(line, 'export ') then
+        startPos = 8
+      end
+      local key = string.sub(line, startPos, equalsPos - 1)
       local val = string.sub(line, equalsPos + 1)
       if key then
         env[key] = val
