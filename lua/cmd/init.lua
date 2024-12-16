@@ -113,6 +113,7 @@ local function har2curl(lines)
   if body ~= "" then
     curl_input = curl_input .. " -d '" .. body .. "'"
   end
+  curl_input = string.gsub(curl_input, "%%", "%%%%")
 
   return string.gsub(get_env('curl', curl_command), "{input}", curl_input)
 end
