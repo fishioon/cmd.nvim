@@ -31,12 +31,21 @@ local function startsWithHttpMethod(str)
   return false
 end
 
+local function trim_quotes(str)
+    local first_char = str:sub(1, 1)
+    local last_char = str:sub(-1)
+    if (first_char == "'" and last_char == "'") or (first_char == '"' and last_char == '"') then
+        return str:sub(2, -2)
+    end
+    return str
+end
+
 local function handleExport(line)
   if startsWith(line, 'export ') then
     local equalsPos = string.find(line, '=')
     if equalsPos then
       local key = string.sub(line, 8, equalsPos - 1)
-      local val = string.sub(line, equalsPos + 1)
+      local val = trim_quotes(string.sub(line, equalsPos + 1))
       if key then
         local_env[key] = val
       end
@@ -166,7 +175,7 @@ local function loadEnvLines(lines, env)
         startPos = 8
       end
       local key = string.sub(line, startPos, equalsPos - 1)
-      local val = string.sub(line, equalsPos + 1)
+      local val = trim_quotes(string.sub(line, equalsPos + 1))
       if key then
         env[key] = val
       end
