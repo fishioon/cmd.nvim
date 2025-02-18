@@ -1,6 +1,8 @@
 local curl_command = 'curl -s -S {input}'
 local local_env = {}
 
+local M = {}
+
 local function get_env(name, default_var)
   return local_env[name] or vim.env[name] or os.getenv(name) or default_var
 end
@@ -203,7 +205,7 @@ local function loadEnv(cursor)
   return loadEnvLines(lines, env)
 end
 
-local function cmd()
+function M.cmd()
   loadWorkspaceEnv()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line = vim.fn.getline('.')
@@ -227,10 +229,7 @@ local function cmd()
   return handleExport(envsubst(line))
 end
 
-local function setup()
+function M.setup()
 end
 
-return {
-  setup = setup,
-  cmd = cmd,
-}
+return M
